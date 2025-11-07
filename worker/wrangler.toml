@@ -1,0 +1,52 @@
+name = "xvpn-worker"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+node_compat = true
+
+# Workers Paid plan required for higher limits
+workers_dev = true
+
+# Environment variables (set via wrangler secret put or .dev.vars for local)
+# AUTH0_DOMAIN
+# AUTH0_AUDIENCE
+# ALLOWED_ORIGINS
+# RATE_LIMIT_MAX_REQUESTS
+# RATE_LIMIT_WINDOW_MS
+
+[build]
+command = ""
+
+[env.production]
+name = "xvpn-worker-production"
+workers_dev = false
+
+# KV Namespaces for rate limiting and session management
+[[kv_namespaces]]
+binding = "RATE_LIMIT"
+id = "your_kv_namespace_id"
+preview_id = "your_preview_kv_namespace_id"
+
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "your_sessions_kv_namespace_id"
+preview_id = "your_preview_sessions_kv_namespace_id"
+
+[[kv_namespaces]]
+binding = "AUDIT_LOG"
+id = "your_audit_kv_namespace_id"
+preview_id = "your_preview_audit_kv_namespace_id"
+
+# Durable Objects for WebSocket connections (if needed)
+# [[durable_objects.bindings]]
+# name = "PROXY_SESSION"
+# class_name = "ProxySession"
+# script_name = "xvpn-worker"
+
+# Routes for custom domain (optional)
+# routes = [
+#   { pattern = "xvpn.example.com/*", zone_name = "example.com" }
+# ]
+
+# Limits
+[limits]
+cpu_ms = 50

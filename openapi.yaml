@@ -1,0 +1,396 @@
+openapi: 3.0.3
+info:
+  title: xvpn Worker API
+  description: |
+    xvpn Cloudflare Worker API for authenticated HTTP/HTTPS proxy service.
+
+    ## Authentication
+    All protected endpoints require a JWT Bearer token obtained from Auth0.
+
+    ## Rate Limiting
+    - Default: 100 requests per minute per user
+    - Headers: `X-RateLimit-Remaining`, `X-RateLimit-Reset`
+
+    ## CORS
+    CORS is configured to allow requests from specified origins only.
+  version: 1.0.0
+  contact:
+    name: xvpn Support
+    url: https://github.com/your-org/xvpn
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://xvpn-worker.your-subdomain.workers.dev
+    description: Production server
+  - url: http://localhost:8787
+    description: Local development server
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Session
+    description: User session management
+  - name: Proxy
+    description: HTTP/HTTPS proxy endpoints
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Returns the health status of the Worker
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+                timestamp: '2025-01-01T00:00:00.000Z'
+
+  /api:
+    get:
+      tags:
+        - Health
+      summary: API information
+      description: Returns basic API information and available endpoints
+      operationId: getApiInfo
+      responses:
+        '200':
+          description: API information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiInfoResponse'
+              example:
+                name: xvpn-worker
+                version: 1.0.0
+                endpoints:
+                  health: /health
+                  proxy: /proxy
+                  session: /session
+
+  /session:
+    get:
+      tags:
+        - Session
+      summary: Get session information
+      description: Returns information about the authenticated user's session
+      operationId: getSession
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Session information
+          headers:
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+              example:
+                userId: 'auth0|123456789'
+                email: user@example.com
+                emailVerified: true
+                rateLimit:
+                  remaining: 95
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+  /proxy:
+    get:
+      tags:
+        - Proxy
+      summary: Proxy GET request
+      description: Proxies an HTTP GET request to the specified target URL
+      operationId: proxyGet
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TargetURL'
+      responses:
+        '200':
+          description: Proxied response (status varies)
+          headers:
+            X-Proxied-By:
+              schema:
+                type: string
+                example: xvpn
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '502':
+          $ref: '#/components/responses/ProxyError'
+
+    post:
+      tags:
+        - Proxy
+      summary: Proxy POST request
+      description: Proxies an HTTP POST request to the specified target URL
+      operationId: proxyPost
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TargetURL'
+      requestBody:
+        description: Request body to forward to the target
+        content:
+          application/json:
+            schema:
+              type: object
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+          multipart/form-data:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Proxied response (status varies)
+          headers:
+            X-Proxied-By:
+              schema:
+                type: string
+                example: xvpn
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+          content:
+            '*/*':
+              schema:
+                type: string
+                format: binary
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '502':
+          $ref: '#/components/responses/ProxyError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from Auth0
+
+  parameters:
+    TargetURL:
+      name: X-Target-URL
+      in: header
+      required: true
+      description: The target URL to proxy the request to
+      schema:
+        type: string
+        format: uri
+        example: https://api.github.com/users/octocat
+
+  headers:
+    X-RateLimit-Remaining:
+      description: Number of requests remaining in the current rate limit window
+      schema:
+        type: integer
+        example: 95
+    X-RateLimit-Reset:
+      description: Unix timestamp when the rate limit resets
+      schema:
+        type: integer
+        format: int64
+        example: 1640000060000
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - status
+        - timestamp
+
+    ApiInfoResponse:
+      type: object
+      properties:
+        name:
+          type: string
+          example: xvpn-worker
+        version:
+          type: string
+          example: 1.0.0
+        endpoints:
+          type: object
+          properties:
+            health:
+              type: string
+              example: /health
+            proxy:
+              type: string
+              example: /proxy
+            session:
+              type: string
+              example: /session
+      required:
+        - name
+        - version
+        - endpoints
+
+    SessionResponse:
+      type: object
+      properties:
+        userId:
+          type: string
+          description: User ID from Auth0
+          example: 'auth0|123456789'
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: user@example.com
+        emailVerified:
+          type: boolean
+          description: Whether the email is verified
+          example: true
+        rateLimit:
+          type: object
+          properties:
+            remaining:
+              type: integer
+              description: Remaining requests in current window
+              example: 95
+      required:
+        - userId
+        - email
+        - rateLimit
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: Invalid token
+        details:
+          type: string
+          description: Additional error details
+          example: jwt expired
+      required:
+        - error
+
+    RateLimitErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: Rate limit exceeded
+        resetAt:
+          type: string
+          format: date-time
+          description: When the rate limit resets
+          example: '2025-01-01T00:01:00Z'
+      required:
+        - error
+        - resetAt
+
+  responses:
+    UnauthorizedError:
+      description: Authentication failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Invalid token
+            details: jwt expired
+
+    ForbiddenError:
+      description: Access denied
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Domain not allowed
+
+    BadRequestError:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: X-Target-URL header is required
+
+    RateLimitError:
+      description: Rate limit exceeded
+      headers:
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+            example: 0
+        X-RateLimit-Reset:
+          $ref: '#/components/headers/X-RateLimit-Reset'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RateLimitErrorResponse'
+          example:
+            error: Rate limit exceeded
+            resetAt: '2025-01-01T00:01:00Z'
+
+    ProxyError:
+      description: Proxy request failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Proxy request failed
+            details: ECONNREFUSED
+
+  examples:
+    ProxyGetExample:
+      summary: Proxy a GET request to GitHub API
+      value:
+        headers:
+          Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+          X-Target-URL: https://api.github.com/users/octocat
+
+    ProxyPostExample:
+      summary: Proxy a POST request with JSON body
+      value:
+        headers:
+          Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+          X-Target-URL: https://api.example.com/data
+          Content-Type: application/json
+        body:
+          key: value
+          data: example

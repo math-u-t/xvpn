@@ -1,0 +1,39 @@
+{
+  "name": "xvpn",
+  "version": "1.0.0",
+  "description": "Browser-based secure proxy service with Auth0 and Cloudflare Workers",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "install:all": "npm install && cd worker && npm install && cd ../frontend && npm install",
+    "dev:worker": "cd worker && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build:worker": "cd worker && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "deploy:worker": "cd worker && npm run deploy",
+    "deploy:frontend": "cd frontend && npm run build && echo 'Upload dist/ to your hosting service'",
+    "lint": "cd worker && npm run lint && cd ../frontend && npm run lint",
+    "test": "cd worker && npm test && cd ../frontend && npm test"
+  },
+  "keywords": [
+    "proxy",
+    "vpn",
+    "cloudflare-workers",
+    "auth0",
+    "service-worker",
+    "browser"
+  ],
+  "author": "xvpn contributors",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/xvpn.git"
+  }
+}

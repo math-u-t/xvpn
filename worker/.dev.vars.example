@@ -1,0 +1,21 @@
+# Auth0 Configuration
+AUTH0_DOMAIN=your-tenant.auth0.com
+AUTH0_AUDIENCE=https://your-worker.your-subdomain.workers.dev
+
+# CORS Configuration (comma-separated origins)
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000
+
+# Rate Limiting
+RATE_LIMIT_MAX_REQUESTS=100
+RATE_LIMIT_WINDOW_MS=60000
+
+# Proxy Configuration
+# Comma-separated list of allowed domains to proxy (wildcard supported)
+ALLOWED_PROXY_DOMAINS=*.example.com,example.org,*.wikipedia.org
+
+# Security
+# Set to 'true' in production to enable strict mode
+STRICT_MODE=false
+
+# Logging
+LOG_LEVEL=info
